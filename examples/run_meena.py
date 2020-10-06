@@ -63,19 +63,15 @@ def main(args):
     ]
 
     for context in contexts:
-        # insert [SEPT] between input utterances
-        input_ids = (
-            torch.tensor(
-                [
+        encoder_input_ids = torch.tensor([[
                     token_id
                     for utterance in context
                     for token_id in tokenizer.encode(utterance, out_type=int) + [config.sept_token_id]
-                ]
-                + [config.bos_token_id]
-            )
-            .unsqueeze(0)
-            .to(device)
-        )
+                ]])
+        # insert [SEPT] between input utterances
+        input_ids = torch.cat((encoder_input_ids,torch.tensor([[config.bos_token_id]])),axis=-1).to(device)
+        
+        model.set_encoder_input_ids(encoder_input_ids)
 
         if args.decoding_method == "top_p":
             outputs = model.generate(
@@ -90,7 +86,7 @@ def main(args):
                 eos_token_id=config.eos_token_id,
                 repetition_penalty=1.3,
                 no_repeat_ngram_size=3,
-                num_return_sequences=10,
+                num_return_sequences=1,
             )
         elif args.decoding_method == "beam_search":
             outputs = model.generate(
